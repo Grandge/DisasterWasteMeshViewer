@@ -1,0 +1,66 @@
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+}
+
+#container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header {
+    background-color: #f8f9fa;
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+#controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#map {
+    flex-grow: 1;
+    z-index: 1;
+}
+
+#status-message {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* 凡例スタイル */
+.info.legend {
+    padding: 6px 8px;
+    font: 14px/18px Arial, Helvetica, sans-serif;
+    background: white;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    color: #555;
+}
+
+.info.legend h4 {
+    margin: 0 0 5px;
+    color: #777;
+}
+
+.info.legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
+}
