@@ -14,18 +14,104 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initMap() {
     // 地図の初期化（日本全体を表示）
-    map = L.map('map').setView([36.2048, 138.2529], 5);
+    // preferCanvas: true を設定して、大量のポリゴンをCanvas描画にする（軽量化）
+    map = L.map('map', {
+        preferCanvas: true
+    }).setView([36.2048, 138.2529], 5);
 
     // 国土地理院淡色地図
     L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
         attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>",
-        maxZoom: 18
+        maxZoom: 18,
+        crossOrigin: 'anonymous' // Canvasキャプチャ用にCORS許可が必要
     }).addTo(map);
 }
 
 function setupEventListeners() {
     const fileInput = document.getElementById('csv-file');
     fileInput.addEventListener('change', handleFileSelect);
+
+    const btnDownload = document.getElementById('btn-download-map');
+    btnDownload.addEventListener('click', showDownloadSettings);
+}
+
+function showDownloadSettings() {
+    const modal = document.getElementById('download-settings-modal');
+    const btnStart = document.getElementById('btn-start-capture');
+    const btnCancel = document.getElementById('btn-cancel-capture');
+
+    modal.style.display = 'flex';
+
+    // イベントリスナーの重複登録を防ぐため、クローンで置換
+    const newBtnStart = btnStart.cloneNode(true);
+    btnStart.parentNode.replaceChild(newBtnStart, btnStart);
+
+    const newBtnCancel = btnCancel.cloneNode(true);
+    btnCancel.parentNode.replaceChild(newBtnCancel, btnCancel);
+
+    newBtnStart.addEventListener('click', () => {
+        const includeLegend = document.getElementById('chk-include-legend').checked;
+        modal.style.display = 'none';
+        startScreenCapture(includeLegend);
+    });
+
+    newBtnCancel.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+}
+
+async function startScreenCapture(includeLegend) {
+    const statusMsg = document.getElementById('status-message');
+    const mapElement = document.getElementById('map');
+
+    statusMsg.textContent = '画像生成処理中...';
+
+    // UI更新をレンダリングさせるためのウェイト
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    try {
+        const zoomControl = document.querySelector('.leaflet-control-zoom');
+        const legend = document.querySelector('.info.legend');
+
+        // 1. 一時的に非表示
+        if (zoomControl) zoomControl.style.display = 'none';
+
+        // 凡例の制御
+        if (legend) {
+            legend.style.display = includeLegend ? 'block' : 'none';
+        }
+
+        // 2. html2canvasで画像化
+        // useCORS: true が重要 (地図タイル読み込みのため)
+        const canvas = await html2canvas(mapElement, {
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            width: mapElement.offsetWidth,
+            height: mapElement.offsetHeight
+        });
+
+        const dataUrl = canvas.toDataURL('image/png');
+
+        // 3. 画像保存
+        const link = document.createElement('a');
+        link.download = `map-visualization-${new Date().getTime()}.png`;
+        link.href = dataUrl;
+        link.click();
+
+        statusMsg.textContent = '画像を保存しました';
+
+    } catch (error) {
+        console.error('Image generation error:', error);
+        statusMsg.textContent = '画像生成に失敗しました: ' + error.message;
+    } finally {
+        // 4. UI復帰
+        const zoomControl = document.querySelector('.leaflet-control-zoom');
+        const legend = document.querySelector('.info.legend');
+
+        if (zoomControl) zoomControl.style.display = 'block';
+        if (legend) legend.style.display = 'block';
+    }
 }
 
 function handleFileSelect(event) {

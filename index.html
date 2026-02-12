@@ -15,9 +15,10 @@
 <body>
     <div id="container">
         <header>
-            <h1>災害廃棄物メッシュ閲覧ツール <small style="font-size: 0.6em; color: #777;">v1.0.0</small></h1>
+            <h1>災害廃棄物メッシュ閲覧ツール <small style="font-size: 0.6em; color: #777;">v1.1.0</small></h1>
             <div id="controls">
                 <input type="file" id="csv-file" accept=".csv">
+                <button id="btn-download-map">画像保存</button>
                 <span id="status-message">CSVファイルを選択してください</span>
             </div>
         </header>
@@ -36,6 +37,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- 画像保存設定モーダル -->
+        <div id="download-settings-modal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 400px;">
+                <h2>画像保存設定</h2>
+                <p>現在の画面を画像として保存します。</p>
+                <div style="margin: 20px 0;">
+                    <input type="checkbox" id="chk-include-legend" checked>
+                    <label for="chk-include-legend">凡例を含める</label>
+                </div>
+                <p style="font-size: 0.9em; color: #666;">
+                    <strong>注意:</strong><br>
+                    データ量が多い場合、画像の生成に時間がかかることがあります。<br>
+                    処理中はブラウザが応答しなくなる場合がありますが、そのままお待ちください。
+                </p>
+                <div class="modal-actions">
+                    <button id="btn-start-capture" class="primary-btn">画像保存</button>
+                    <button id="btn-cancel-capture" class="secondary-btn">キャンセル</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Leaflet JS -->
@@ -43,6 +65,8 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- PapaParse JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <script src="js/meshUtil.js"></script>
     <script src="js/main.js"></script>
