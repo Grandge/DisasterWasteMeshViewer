@@ -1,6 +1,10 @@
 // グローバル変数
 let map;
 let geojsonLayer;
+// 全データ保持用
+let allData = [];
+// 閾値設定
+const DATA_THRESHOLD = 10000;
 
 // 初期化処理
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,20 +35,30 @@ function handleFileSelect(event) {
     }
 
     const statusMsg = document.getElementById('status-message');
-    statusMsg.textContent = '読み込み中...';
+    statusMsg.textContent = '読み込み中... (変換中)';
+
+    // メモリリセット
+    allData = [];
 
     Papa.parse(file, {
         header: true,
         dynamicTyping: true,
         skipEmptyLines: true,
+        worker: true, // Web Worker使用
         complete: function (results) {
             console.log('Parsed results:', results);
             if (results.errors.length > 0) {
                 console.error('Errors:', results.errors);
                 statusMsg.textContent = 'エラーが発生しました: ' + results.errors[0].message;
             } else {
-                statusMsg.textContent = `読み込み完了: ${results.data.length} 件のデータ`;
-                processData(results.data);
+                allData = results.data;
+                statusMsg.textContent = `読み込み完了: ${allData.length} 件のデータ`;
+
+                if (allData.length > DATA_THRESHOLD) {
+                    showAreaSelector(allData);
+                } else {
+                    processData(allData);
+                }
             }
         },
         error: function (error) {
@@ -52,6 +66,118 @@ function handleFileSelect(event) {
             statusMsg.textContent = '読み込みエラー: ' + error.message;
         }
     });
+}
+
+function showAreaSelector(data) {
+    const modal = document.getElementById('area-selector-modal');
+    const listContainer = document.getElementById('area-list');
+    const btnRender = document.getElementById('btn-render');
+    const btnCancel = document.getElementById('btn-cancel');
+
+    listContainer.innerHTML = '';
+
+    // 2次メッシュコード（上位6桁）ごとに集計
+    const groups = {};
+    data.forEach(row => {
+        if (!row.CODE) return;
+        const codeStr = String(row.CODE);
+        if (codeStr.length < 6) return;
+
+        // 廃棄物量0は表示対象外とするため、件数カウントからも除外する（オプション）
+        // ここでは「表示対象」の件数としてカウントする
+        if (row.Value === 0) return;
+
+        const secondaryCode = codeStr.substring(0, 6);
+        if (!groups[secondaryCode]) {
+            groups[secondaryCode] = { count: 0, code: secondaryCode };
+        }
+        groups[secondaryCode].count++;
+    });
+
+    // キーでソート
+    const sortedKeys = Object.keys(groups).sort();
+
+    if (sortedKeys.length === 0) {
+        listContainer.innerHTML = '<p>表示可能なデータ（値が0より大きいデータ）がありません。</p>';
+        return;
+    }
+
+    // リスト生成
+    sortedKeys.forEach(key => {
+        const group = groups[key];
+        const item = document.createElement('div');
+        item.className = 'area-item';
+
+        // 視認性を上げるため 1次-2次 の形式で表示 (例: 5236-00)
+        const displayKey = `${key.substring(0, 4)}-${key.substring(4, 6)}`;
+
+        item.innerHTML = `
+            <input type="checkbox" id="area-${key}" value="${key}" checked>
+            <label for="area-${key}">
+                2次メッシュ: <strong>${displayKey}</strong> 
+                <span class="area-count">(${group.count}件)</span>
+            </label>
+        `;
+        listContainer.appendChild(item);
+    });
+
+    modal.style.display = 'flex';
+
+    const newBtnRender = btnRender.cloneNode(true);
+    btnRender.parentNode.replaceChild(newBtnRender, btnRender);
+
+    const newBtnCancel = btnCancel.cloneNode(true);
+    btnCancel.parentNode.replaceChild(newBtnCancel, btnCancel);
+
+    newBtnRender.addEventListener('click', () => {
+        const checkboxes = listContainer.querySelectorAll('input[type="checkbox"]:checked');
+        const selectedAreas = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selectedAreas.length === 0) {
+            alert('少なくとも1つのエリアを選択してください');
+            return;
+        }
+
+        // 1. モーダルを直ちに閉じる
+        modal.style.display = 'none';
+
+        // 2. ステータス更新 (UI反映のため微小な遅延を入れる)
+        const statusMsg = document.getElementById('status-message');
+        statusMsg.textContent = '描画処理中...しばらくお待ちください';
+
+        // 3. 非同期で描画処理を実行
+        setTimeout(() => {
+            filterAndRender(selectedAreas);
+        }, 50);
+    });
+
+    newBtnCancel.addEventListener('click', () => {
+        modal.style.display = 'none';
+        document.getElementById('status-message').textContent = '表示をキャンセルしました';
+    });
+}
+
+function filterAndRender(targetAreas) {
+    const targetSet = new Set(targetAreas);
+    const filteredData = allData.filter(row => {
+        if (!row.CODE) return false;
+        // 廃棄物量0は除外
+        if (row.Value === 0) return false;
+
+        const codeStr = String(row.CODE);
+        if (codeStr.length < 6) return false;
+        // 2次メッシュ(6桁)で判定
+        return targetSet.has(codeStr.substring(0, 6));
+    });
+
+    document.getElementById('status-message').textContent = `表示中: ${filteredData.length} / ${allData.length} 件`;
+
+    processData(filteredData);
+
+    // 完了通知
+    setTimeout(() => {
+        alert(`描画が完了しました。\n表示件数: ${filteredData.length}件`);
+    }, 100);
 }
 
 function processData(data) {
@@ -74,6 +200,8 @@ function processData(data) {
 
     data.forEach(row => {
         if (!row.CODE) return;
+        // 念のためここでも0除外（フィルタリングされていない場合のため）
+        if (row.Value === 0) return;
 
         try {
             // メッシュコードから矩形を取得
@@ -122,10 +250,7 @@ function processData(data) {
         style: function (feature) {
             return {
                 fillColor: getColor(feature.properties.value, maxValue),
-                weight: 1,
-                opacity: 1,
-                color: 'white',
-                dashArray: '3',
+                stroke: false, // 枠線なし
                 fillOpacity: 0.6
             };
         },
@@ -224,4 +349,3 @@ function resetHighlight(e) {
         geojsonLayer.resetStyle(e.target);
     }
 }
-

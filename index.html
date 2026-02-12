@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>災害廃棄物メッシュ閲覧ツール</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/modal.css">
 </head>
+
 <body>
     <div id="container">
         <header>
-            <h1>災害廃棄物メッシュ閲覧ツール</h1>
+            <h1>災害廃棄物メッシュ閲覧ツール <small style="font-size: 0.6em; color: #777;">v1.0.0</small></h1>
             <div id="controls">
                 <input type="file" id="csv-file" accept=".csv">
                 <span id="status-message">CSVファイルを選択してください</span>
@@ -21,16 +23,29 @@
         </header>
         <div id="map"></div>
         <div id="legend"></div>
+
+        <!-- エリア選択モーダル -->
+        <div id="area-selector-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>表示エリア選択</h2>
+                <p>データ量が多いため、表示するエリアを選択してください（推奨: 5万件以下）</p>
+                <div id="area-list"></div>
+                <div class="modal-actions">
+                    <button id="btn-render" class="primary-btn">選択エリアを表示</button>
+                    <button id="btn-cancel" class="secondary-btn">キャンセル</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- PapaParse JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    
+
     <script src="js/meshUtil.js"></script>
     <script src="js/main.js"></script>
 </body>
+
 </html>
